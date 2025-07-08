@@ -1,0 +1,143 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* body of header */
+
+.containerHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  min-height: 80vh;
+  background-color: #fbfbff;
+  padding-bottom: 50px;
+  flex-wrap: wrap; /* works to be receptive */
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.logo {
+  font-weight: bold;
+  font-size: 1.2rem;
+  width: 100px;
+}
+
+.navLinks {
+  display: flex;
+  gap: 50px;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+}
+
+.navLinks a {
+  text-decoration: none;
+  color: black;
+  font-size: 0.95rem;
+}
+.btnmain {
+  border: none;
+}
+
+.btnmain:hover {
+  color: #a7d7f9;
+}
+
+/* body of instructions */
+
+.instructionscontainer {
+  background-color: #fbfbff;
+  max-width: 2500px;
+  height: 750px;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  align-items: center;
+  text-align: center;
+  overflow: hidden;
+}
+
+/* body of flotter */
+.containerflotter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #fbfbff;
+  flex-wrap: wrap;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  padding: 10px 20px;
+  width: 100%;
+}
+.instructionscontainer {
+  background-color: #a7d7f9;
+  padding: 40px 20px;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  text-align: center;
+}
+
+.cardswrapper {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.card {
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  padding: 20px;
+  width: 300px;
+  text-align: center;
+  transition: transform 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+}
+
+.card h3 {
+  margin-bottom: 10px;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.card p {
+  font-size: 0.95rem;
+  color: #555;
+  margin-bottom: 15px;
+}
+
+.docotora {
+  width: 200px;
+  height: auto;
+}
+.testpadres {
+  width: 200px;
+  height: 120px;
+  margin-top: 38px;
+}
+.papaybebe {
+  width: 200px;
+  height: 120px;
+  margin-top: 38px;
+}
+
+.registerButton {
+  margin-top: 2%;
+  border-radius: 20px;
+  padding: 1%;
+  width: auto;
+  background-color: #a7d7f9;
+  border: none;
+  transition: all 0.5s;
+  color: white;
+  font-size: 17px;
+  background-color: black;
+}
+
+.registerButton:hover {
+  transform: scale(1.1);
+}
