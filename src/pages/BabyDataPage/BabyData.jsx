@@ -3,6 +3,11 @@ import Header from "../../components/HeaderComponent/Header";
 import Footer from "../../components/FooterComponent/Footer";
 import DialogAddComponent from "../../components/DialogAddComponent/DialogAddComponent";
 import DialogLinkComponent from "../../components/DialogLinkComponent/DialogLinkComponent";
+import Modal from "@mui/material/Modal";
+import Box from "@mui/material/Box";
+import TextField from "@mui/material/TextField";
+import Autocomplete from "@mui/material/Autocomplete";
+import Button from "@mui/material/Button";
 
 import { useEffect, useState } from "react";
 import { FaBaby } from "react-icons/fa";
@@ -16,9 +21,55 @@ export default function BabyData() {
   const [bebes, setBebes] = useState([]);
   const [perfil, setPerfil] = useState([]);
   const [userId, setUserId] = useState("");
-
-  const [mensaje, setMensaje] = useState("");
   const [mensajePantalla, setMensajePantalla] = useState("");
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedBebeId, setSelectedBebeId] = useState(null);
+  const [fisioterapeutas, setFisioterapeutas] = useState([]);
+  const [fisioterapeutaSeleccionado, setFisioterapeutaSeleccionado] = useState(null);
+
+  useEffect(() => {
+    // Cargar lista fisioterapeutas de Supabase
+    const fetchFisioterapeutas = async () => {
+      const { data, error } = await supabase
+        .from("perfiles")
+        .select("id_perfil, nombre_perfil")
+        .eq("rol_perfil", "fisioterapeuta");
+
+      if (!error) setFisioterapeutas(data);
+    };
+    fetchFisioterapeutas();
+  }, []);
+
+  const abrirModal = (id_bebe) => {
+    setSelectedBebeId(id_bebe);
+    setFisioterapeutaSeleccionado(null);
+    setModalOpen(true);
+  };
+
+  const vincularBebe = async (e) => {
+    e.preventDefault();
+    // Verificamos que data y user existan
+    if (userId) {
+      const { error: insertError } = await supabase
+        .from("vincular_bebe")
+        .insert([
+          {
+            id_perfil: fisioterapeutaSeleccionado.id_perfil,
+            id_bebe: selectedBebeId
+          },
+        ]);
+
+      if (insertError) {
+        console.log(`Error al insertar en la tabla: ${insertError.message}`);
+      } else {
+        console.log("Registro exitoso..");
+        window.location.reload();
+      }
+    } else {
+      console.log("Registro fallido. Intenta de nuevo.");
+    }
+  };
 
   const goTest = (idBebe) => {
     navigate(`/Test/${idBebe}`);
@@ -101,6 +152,7 @@ export default function BabyData() {
         `
         )
         .eq("id_perfil", userId)
+        .eq("aceptado", true)
         .order("id_bebe", { ascending: true });
       setBebes(data);
       if (error) {
@@ -144,7 +196,6 @@ export default function BabyData() {
                   </div>
                   <div className={styles.cardBody}>
                     <h4>Meses: {bebe.meses_bebe}</h4>
-                    <h5>UUID: {bebe.id_bebe}</h5>
                     <p>Peso: {bebe.peso_bebe} kg</p>
                     <p>Estatura: {bebe.estatura_bebe} cm</p>
                     <div className={styles.buttonContainer}>
@@ -157,6 +208,12 @@ export default function BabyData() {
                         className={`btn btn-light ${styles.addButton}`}
                         onClick={() => goResult(bebe.id_bebe)}>
                         Mostrar resultados
+                      </button>
+                      <button
+                        className={`btn btn-light ${styles.addButton}`}
+                        onClick={() => abrirModal(bebe.id_bebe)}
+                      >
+                        Asignar fisioterapeuta
                       </button>
                     </div>
                   </div>
@@ -180,7 +237,6 @@ export default function BabyData() {
                   </div>
                   <div className={styles.cardBody}>
                     <h4>Meses: {vinculo.bebe.meses_bebe}</h4>
-                    <h5>UUID: {vinculo.bebe.id_bebe}</h5>
                     <p>Peso: {vinculo.bebe.peso_bebe} kg</p>
                     <p>Estatura: {vinculo.bebe.estatura_bebe} cm</p>
                     <button
@@ -203,11 +259,51 @@ export default function BabyData() {
             <DialogAddComponent />
           )}
         </div>
-        <div className={styles.messageContainer}>
-          <p>{mensaje}</p>
-        </div>
         <Footer />
       </div>
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        aria-labelledby="modal-fisio-title"
+        aria-describedby="modal-fisio-description"
+      >
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 400,
+            bgcolor: "background.paper",
+            borderRadius: 2,
+            boxShadow: 24,
+            p: 4,
+          }}
+        >
+          <h2 id="modal-fisio-title">Selecciona un fisioterapeuta</h2>
+          <Autocomplete
+            options={fisioterapeutas}
+            getOptionLabel={(option) => option.nombre_perfil}
+            value={fisioterapeutaSeleccionado}
+            onChange={(event, newValue) => setFisioterapeutaSeleccionado(newValue)}
+            renderInput={(params) => <TextField {...params} label="Fisioterapeuta" />}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            clearOnEscape
+          />
+          <Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end" }}>
+            <Button onClick={() => setModalOpen(false)} sx={{ mr: 1 }}>
+              Cancelar
+            </Button>
+            <Button
+              variant="contained"
+              disabled={!fisioterapeutaSeleccionado}
+              onClick={(vincularBebe)}
+            >
+              Guardar
+            </Button>
+          </Box>
+        </Box>
+      </Modal>
     </>
   );
 }

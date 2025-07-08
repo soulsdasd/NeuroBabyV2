@@ -58,7 +58,7 @@ function DialogLinkComponent(){
       };
     return(
         <>
-            <button className={styles.buttonAdd} onClick={handleOpen}>
+            <button className={`btn btn-light ${styles.buttonAdd}`} onClick={handleOpen}>
             +
             </button>
             <Dialog open={isOpen} onClose={handleClose}>
