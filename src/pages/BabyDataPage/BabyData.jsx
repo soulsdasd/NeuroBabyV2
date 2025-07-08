@@ -28,6 +28,8 @@ export default function BabyData() {
   const [fisioterapeutas, setFisioterapeutas] = useState([]);
   const [fisioterapeutaSeleccionado, setFisioterapeutaSeleccionado] = useState(null);
 
+  const [solicitudes, setSolicitudes] = useState([]);
+
   useEffect(() => {
     // Cargar lista fisioterapeutas de Supabase
     const fetchFisioterapeutas = async () => {
@@ -41,6 +43,34 @@ export default function BabyData() {
     fetchFisioterapeutas();
   }, []);
 
+  // Obtener usuario actual y cargar solicitudes pendientes
+  useEffect(() => {
+    const cargarUsuarioYSolicitudes = async () => {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData?.user) {
+        console.log("Error al obtener usuario", userError);
+        return;
+      }
+      setUserId(userData.user.id);
+
+      // Cargar solicitudes pendientes
+      const { data: solicitudesPendientes, error: solicitudesError } = await supabase
+        .from("vincular_bebe")
+        .select(`id_vincular, bebe(id_bebe, nombre_bebe, meses_bebe, peso_bebe, estatura_bebe, genero)`)
+        .eq("id_perfil", userData.user.id)
+        .eq("aceptado", false);
+
+      if (!solicitudesError) {
+        setSolicitudes(solicitudesPendientes);
+        console.log(solicitudes);
+      } else {
+        console.log("Error al cargar solicitudes", solicitudesError);
+      }
+    };
+
+    cargarUsuarioYSolicitudes();
+  }, []);
+
   const abrirModal = (id_bebe) => {
     setSelectedBebeId(id_bebe);
     setFisioterapeutaSeleccionado(null);
@@ -49,14 +79,13 @@ export default function BabyData() {
 
   const vincularBebe = async (e) => {
     e.preventDefault();
-    // Verificamos que data y user existan
-    if (userId) {
+    if (userId && fisioterapeutaSeleccionado) {
       const { error: insertError } = await supabase
         .from("vincular_bebe")
         .insert([
           {
             id_perfil: fisioterapeutaSeleccionado.id_perfil,
-            id_bebe: selectedBebeId
+            id_bebe: selectedBebeId,
           },
         ]);
 
@@ -67,7 +96,7 @@ export default function BabyData() {
         window.location.reload();
       }
     } else {
-      console.log("Registro fallido. Intenta de nuevo.");
+      console.log("Datos insuficientes para vincular");
     }
   };
 
@@ -77,22 +106,6 @@ export default function BabyData() {
   const goResult = (idBebe) => {
     navigate(`/Resultados/${idBebe}`);
   };
-
-  //Obtener id del usuario
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: userData, error: userError } =
-        await supabase.auth.getUser();
-      if (userError || !userData?.user) {
-        console.log("Error al obtener los datos del usuario: ", userError);
-      } else {
-        console.log("Datos obtenidos exitosamente");
-        setUserId(userData.user.id);
-      }
-    };
-
-    getUser();
-  }, []);
 
   //Obtener datos del perfil del usuario
   useEffect(() => {
@@ -116,9 +129,11 @@ export default function BabyData() {
     getPerfil();
   }, [userId]);
 
+  // Cargar bebés o vínculos según rol
   async function fetchBebes() {
-    console.log("Rol: ", perfil.rol_perfil);
-    if (perfil.rol_perfil == "tutor") {
+    if (!perfil.rol_perfil) return;
+
+    if (perfil.rol_perfil === "tutor") {
       const { data, error } = await supabase
         .from("bebe")
         .select("*")
@@ -128,28 +143,16 @@ export default function BabyData() {
       if (error) {
         console.log("Error al obtener datos de la tabla bebe: ", error);
       }
-      if (data.length == 0) {
+      if (!data || data.length === 0) {
         setMensajePantalla(
           "Actualmente no hay pacientes registrados. Utilice el botón en la esquina inferior derecha para añadir uno."
         );
       }
-    } else if (perfil.rol_perfil == "fisioterapeuta") {
+    } else if (perfil.rol_perfil === "fisioterapeuta") {
       const { data, error } = await supabase
         .from("vincular_bebe")
         .select(
-          `
-          id_vincular, 
-          id_perfil,
-          id_bebe,
-          bebe(
-            id_bebe,
-            nombre_bebe,
-            meses_bebe,
-            peso_bebe,
-            estatura_bebe,
-            genero
-          )
-        `
+          `id_vincular, id_perfil, id_bebe, bebe(id_bebe, nombre_bebe, meses_bebe, peso_bebe, estatura_bebe, genero)`
         )
         .eq("id_perfil", userId)
         .eq("aceptado", true)
@@ -158,7 +161,7 @@ export default function BabyData() {
       if (error) {
         console.log("Error al obtener datos de la tabla bebe: ", error);
       }
-      if (data.length == 0) {
+      if (!data || data.length === 0) {
         setMensajePantalla(
           "Actualmente no hay pacientes registrados. Utilice el botón en la esquina inferior derecha para añadir uno."
         );
@@ -170,13 +173,28 @@ export default function BabyData() {
     fetchBebes();
   }, [perfil, userId]);
 
+  const eliminarVinculacion = async (id_vincular) => {
+    const { error } = await supabase
+      .from("vincular_bebe")
+      .delete()
+      .eq("id_vincular", id_vincular);
+
+    if (!error) {
+      setSolicitudes((prev) => prev.filter((s) => s.id_vincular !== id_vincular));
+      fetchBebes(); // refresca lista si quieres
+    } else {
+      console.error("Error al eliminar la vinculación:", error.message);
+    }
+  };
+
   return (
     <>
       <div className={styles.pageContainer}>
-        <Header></Header>
+        <Header />
 
         <div className={styles.mainContainer}>
           <p>{mensajePantalla}</p>
+          {/* Listado normal de bebés o vínculos */}
           {perfil.rol_perfil === "tutor"
             ? bebes.map((bebe, index) => (
                 <div key={index} className={styles.cardContainer}>
@@ -201,12 +219,14 @@ export default function BabyData() {
                     <div className={styles.buttonContainer}>
                       <button
                         className={`btn btn-light ${styles.addButton}`}
-                        onClick={() => goTest(bebe.id_bebe)}>
+                        onClick={() => goTest(bebe.id_bebe)}
+                      >
                         Agregar Registro
                       </button>
                       <button
                         className={`btn btn-light ${styles.addButton}`}
-                        onClick={() => goResult(bebe.id_bebe)}>
+                        onClick={() => goResult(bebe.id_bebe)}
+                      >
                         Mostrar resultados
                       </button>
                       <button
@@ -233,7 +253,33 @@ export default function BabyData() {
                         style={{ color: "#f3acdf", marginBottom: "10px" }}
                       />
                     )}
-                    <h3>{vinculo.bebe.nombre_bebe}</h3>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        width: "100%",
+                      }}
+                    >
+                      <h3>{vinculo.bebe.nombre_bebe}</h3>
+                      <Button
+                        variant="contained"
+                        color="error"
+                        style={{
+                          borderRadius: "999px",
+                          width: "30px",
+                          minWidth: "30px",
+                          padding: 0,
+                          height: "30px",
+                          display: "flex",
+                          justifyContent: "center",
+                          alignItems: "center",
+                        }}
+                        onClick={() => eliminarVinculacion(vinculo.id_vincular)}
+                      >
+                        X
+                      </Button>
+                    </div>
                   </div>
                   <div className={styles.cardBody}>
                     <h4>Meses: {vinculo.bebe.meses_bebe}</h4>
@@ -241,19 +287,21 @@ export default function BabyData() {
                     <p>Estatura: {vinculo.bebe.estatura_bebe} cm</p>
                     <button
                       className={styles.addButton}
-                      onClick={() => goTest(vinculo.bebe.id_bebe)}>
+                      onClick={() => goTest(vinculo.bebe.id_bebe)}
+                    >
                       Agregar Registro
                     </button>
                     <button
                       className={styles.addButton}
-                      onClick={() => goResult(vinculo.bebe.id_bebe)}>
+                      onClick={() => goResult(vinculo.bebe.id_bebe)}
+                    >
                       Mostrar resultados
                     </button>
                   </div>
                 </div>
               ))}
 
-          {perfil.rol_perfil == "fisioterapeuta" ? (
+          {perfil.rol_perfil === "fisioterapeuta" ? (
             <DialogLinkComponent />
           ) : (
             <DialogAddComponent />
@@ -261,6 +309,7 @@ export default function BabyData() {
         </div>
         <Footer />
       </div>
+
       <Modal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -287,7 +336,7 @@ export default function BabyData() {
             value={fisioterapeutaSeleccionado}
             onChange={(event, newValue) => setFisioterapeutaSeleccionado(newValue)}
             renderInput={(params) => <TextField {...params} label="Fisioterapeuta" />}
-            isOptionEqualToValue={(option, value) => option.id === value.id}
+            isOptionEqualToValue={(option, value) => option.id_perfil === value.id_perfil}
             clearOnEscape
           />
           <Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end" }}>
@@ -297,7 +346,7 @@ export default function BabyData() {
             <Button
               variant="contained"
               disabled={!fisioterapeutaSeleccionado}
-              onClick={(vincularBebe)}
+              onClick={vincularBebe}
             >
               Guardar
             </Button>

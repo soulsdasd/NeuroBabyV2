@@ -83,6 +83,19 @@ export default function Header() {
     }
   };
 
+  const eliminarVinculacion = async (id_vincular) => {
+    const { error } = await supabase
+      .from("vincular_bebe")
+      .delete()
+      .eq("id_vincular", id_vincular);
+
+    if (!error) {
+      setSolicitudes((prev) => prev.filter((s) => s.id_vincular !== id_vincular));
+    } else {
+      console.error("Error al eliminar la vinculación:", error.message);
+    }
+  };
+
   return (
     <div className={Styles.containerHeader}>
       {/* Logo */}
@@ -133,7 +146,7 @@ export default function Header() {
       </div>
       <div style={{display: 'flex', alignItems: 'center'}}>
           <Badge
-            color="secondary"
+            color="error"
             variant="dot"
             invisible={solicitudes.length === 0}
             onClick={() => setDrawerOpen(true)}
@@ -169,15 +182,25 @@ export default function Header() {
                       {s.bebe?.nombre_bebe || "Bebé desconocido"}
                     </Typography>
                     <Typography variant="body2">
-                      {s.bebe?.meses_bebe} meses
+                      {s.bebe?.meses_bebe === 1
+                        ? "1 mes"
+                        : `${s.bebe?.meses_bebe} meses`}
                     </Typography>
                     <Button
                       size="small"
                       variant="outlined"
                       onClick={() => aceptarSolicitud(s.id_vincular)}
-                      sx={{ mt: 1 }}
+                      sx={{ mt: 1, marginBottom: "4px" }}
                     >
                       Aceptar
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="error"
+                      onClick={() => eliminarVinculacion(s.id_vincular)}
+                    >
+                      Rechazar
                     </Button>
                   </Box>
                 </ListItem>
